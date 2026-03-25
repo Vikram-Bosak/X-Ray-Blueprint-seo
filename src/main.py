@@ -18,7 +18,7 @@ import pytz
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import settings
-from src.drive_handler import get_oldest_video, download_video, delete_file
+from src.drive_handler import get_oldest_video, download_video, delete_file, list_video_files
 from src.seo_generator import generate_seo_metadata
 from src.youtube_uploader import upload_video
 from src.telegram_notifier import send_success_notification, send_failure_notification
@@ -168,6 +168,24 @@ def run_agent():
         next_file = get_oldest_video(settings.DRIVE_FOLDER_ID)
         next_video_name = next_file["name"] if next_file else None
         
+        # Get video counts
+        all_drive_files = list_video_files(settings.DRIVE_FOLDER_ID)
+        pending_videos = len([f for f in all_drive_files if not f["name"].startswith("✅ DONE")])
+        
+        # Get processed count from PROCESSED folder
+        processed_videos = 0
+        try:
+            from src.drive_handler import _get_drive_service
+            service = _get_drive_service()
+            processed_folder_id = "1ONZ8c2QMFOWiYtnwdOg4Oko7sEcVyl-X"
+            processed = service.files().list(
+                q=f'"{processed_folder_id}" in parents and trashed=false',
+                fields='files(id)'
+            ).execute()
+            processed_videos = len(processed.get('files', []))
+        except:
+            processed_videos = 0
+        
         send_success_notification(
             title=metadata["title"],
             video_url=video_url,
@@ -181,7 +199,9 @@ def run_agent():
                 "uploads_today": state["uploads_today"] if 'state' in locals() else 0
             },
             next_video=next_video_name,
-            next_slot_info=next_slot
+            next_slot_info=next_slot,
+            pending_videos=pending_videos,
+            processed_videos=processed_videos
         )
 
         logger.info("=" * 60)

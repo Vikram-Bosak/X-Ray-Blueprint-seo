@@ -62,10 +62,12 @@ def send_success_notification(
     slot_info: dict = None,
     next_video: str = None,
     next_slot_info: dict = None,
+    pending_videos: int = 0,
+    processed_videos: int = 0,
 ) -> bool:
     """
     Send a success notification after a successful YouTube upload.
-    Format includes video URL, slot timing, next upload info.
+    Format includes video URL, slot timing, next upload info, and video counts.
     """
     if slot_info is None:
         slot_info = {
@@ -81,6 +83,13 @@ def send_success_notification(
     ist_ts = slot_info.get("ist_time", _get_ist_time())
     us_ts = slot_info.get("us_time", "Unknown")
     count = slot_info.get("uploads_today", 0)
+    remaining = 5 - count  # Max 5 per day
+
+    # Build video counts
+    video_counts = f"""
+📊 <b>Today's Uploads:</b> {count}/5 (Remaining: {remaining})
+📁 <b>Pending in Drive:</b> {pending_videos} videos
+✅ <b>Processed:</b> {processed_videos} videos"""
 
     # Build next upload info
     next_info = ""
@@ -103,7 +112,7 @@ def send_success_notification(
 🕐 <b>IST Time:</b> {ist_ts}
 🌎 <b>US Time:</b> {us_ts}
 
-📊 <b>Today's Uploads:</b> {count}/5
+{video_counts}
 📁 <b>Drive File:</b> Moved to PROCESSED ✅{next_info}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
