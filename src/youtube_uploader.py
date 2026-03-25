@@ -106,13 +106,16 @@ def upload_video(local_path: str, metadata: dict) -> dict:
     default_language = metadata.get("default_language", "en")
     
     # Clean tags for YouTube API - only alphanumeric and spaces, max 24 chars each
+    # YouTube doesn't allow: special chars, tags starting with numbers
     import re
     clean_tags = []
     for t in tags:
         # Keep only alphanumeric and spaces, limit to 24 chars
         t_clean = re.sub(r'[^a-zA-Z0-9 ]', '', str(t)).strip()[:24]
-        if t_clean and len(t_clean) >= 2 and t_clean.lower() not in [ct.lower() for ct in clean_tags]:
-            clean_tags.append(t_clean)
+        # Remove tags starting with numbers (YouTube doesn't allow)
+        if t_clean and len(t_clean) >= 2 and not t_clean[0].isdigit():
+            if t_clean.lower() not in [ct.lower() for ct in clean_tags]:
+                clean_tags.append(t_clean)
     tags = clean_tags[:35]  # YouTube allows up to 35 tags
 
     # Ensure #Shorts is in the title for YouTube to classify as a Short
