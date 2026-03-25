@@ -105,18 +105,36 @@ def upload_video(local_path: str, metadata: dict) -> dict:
     category_id = metadata.get("category_id", "22")
     default_language = metadata.get("default_language", "en")
     
-    # Clean tags for YouTube API - only alphanumeric and spaces, max 24 chars each
-    # YouTube doesn't allow: special chars, tags starting with numbers
+    # Clean tags for YouTube API
+    # YouTube doesn't allow: special chars, tags starting with numbers, too short, too long
     import re
     clean_tags = []
+    
+    # Fallback safe tags if AI generates bad tags
+    fallback_tags = [
+        "coin", "swallow", "digestive", "body", "3D", "animation",
+        "science", "medical", "anatomy", "educational", "shorts"
+    ]
+    
     for t in tags:
-        # Keep only alphanumeric and spaces, limit to 24 chars
-        t_clean = re.sub(r'[^a-zA-Z0-9 ]', '', str(t)).strip()[:24]
-        # Remove tags starting with numbers (YouTube doesn't allow)
-        if t_clean and len(t_clean) >= 2 and not t_clean[0].isdigit():
+        # Convert to string and clean
+        t_str = str(t).strip()
+        # Remove all special characters, keep only letters and spaces
+        t_clean = re.sub(r'[^a-zA-Z\s]', '', t_str)
+        # Split and take first word if contains multiple words
+        t_clean = t_clean.split()[0] if t_clean.split() else ""
+        # Limit to 24 chars
+        t_clean = t_clean[:24]
+        # Skip if too short or starts with number
+        if t_clean and len(t_clean) >= 3 and not t_clean[0].isdigit():
             if t_clean.lower() not in [ct.lower() for ct in clean_tags]:
                 clean_tags.append(t_clean)
-    tags = clean_tags[:35]  # YouTube allows up to 35 tags
+    
+    # If no valid tags, use fallback
+    if not clean_tags:
+        clean_tags = fallback_tags[:10]
+    
+    tags = clean_tags[:35]
 
     # Ensure #Shorts is in the title for YouTube to classify as a Short
     if "#Shorts" not in title and "#shorts" not in title:
