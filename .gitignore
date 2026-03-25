@@ -1,0 +1,36 @@
+# .gitignore for YouTube SEO Agent
+
+# Environment / secrets — NEVER commit these
+.env
+youtube_token.json
+service_account*.json
+*credentials*.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Temp files
+/tmp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

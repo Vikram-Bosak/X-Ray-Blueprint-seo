@@ -1,0 +1,38 @@
+{
+  "date_ist": "2026-03-25",
+  "uploads_today": 0,
+  "slots_used": [],
+  "last_upload_ist": null,
+  "slot_windows": {
+    "1": {
+      "start": "18:00",
+      "end": "19:00",
+      "label": "US Morning"
+    },
+    "2": {
+      "start": "20:00",
+      "end": "21:00",
+      "label": "US Mid-Morning"
+    },
+    "3": {
+      "start": "23:00",
+      "end": "00:00",
+      "label": "US Lunch"
+    },
+    "4": {
+      "start": "01:00",
+      "end": "02:00",
+      "label": "US Afternoon"
+    },
+    "5": {
+      "start": "03:00",
+      "end": "04:00",
+      "label": "US Evening"
+    },
+    "6": {
+      "start": "05:30",
+      "end": "07:30",
+      "label": "US Prime Time"
+    }
+  }
+}
