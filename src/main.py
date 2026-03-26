@@ -125,49 +125,12 @@ def run_agent():
                 logger.info(reason)
                 return
 
-            # ── Within-Slot Randomization ─────────────────────────────────────
-            target_dt = compute_upload_time(slot_info, current_ist)
-
-            if current_ist < target_dt:
-                diff_seconds = (target_dt - current_ist).total_seconds()
-                if diff_seconds > 300:  # 5 minutes
-                    # Check if we're already past the target but within slot
-                    slot_end_h, slot_end_m = map(int, slot_info["end"].split(":"))
-                    slot_end_dt = current_ist.replace(
-                        hour=slot_end_h, minute=slot_end_m, second=0, microsecond=0
-                    )
-
-                    # If target passed but still within slot - upload immediately
-                    if target_dt <= current_ist and current_ist < slot_end_dt:
-                        logger.info(
-                            "Slot %s — Target time %s passed but within slot. Proceeding now.",
-                            slot_id,
-                            target_dt.strftime("%H:%M"),
-                        )
-                    else:
-                        logger.info(
-                            "Slot %s — Target time %s is >5 mins away (now %s). Skipping run.",
-                            slot_id,
-                            target_dt.strftime("%H:%M"),
-                            current_ist.strftime("%H:%M"),
-                        )
-                        return
-                else:
-                    logger.info(
-                        "Slot %s — Target time %s is close (in %.1f min). Waiting...",
-                        slot_id,
-                        target_dt.strftime("%H:%M"),
-                        diff_seconds / 60,
-                    )
-                    time.sleep(diff_seconds)
-                    current_ist = now_ist()  # Update current time after sleep
-            else:
-                logger.info(
-                    "Slot %s — Target time %s already passed (now %s). Proceeding.",
-                    slot_id,
-                    target_dt.strftime("%H:%M"),
-                    current_ist.strftime("%H:%M"),
-                )
+            # ── Within-Slot Upload: Upload immediately if in active slot ──────────
+            # No randomization - just upload immediately when in slot
+            logger.info(
+                "Slot %s — Active and available. Uploading now...",
+                slot_id,
+            )
 
         logger.info("Active Slot: %s (%s)", slot_id, slot_info["label"])
 
