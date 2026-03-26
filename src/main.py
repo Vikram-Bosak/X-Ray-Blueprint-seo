@@ -131,13 +131,27 @@ def run_agent():
             if current_ist < target_dt:
                 diff_seconds = (target_dt - current_ist).total_seconds()
                 if diff_seconds > 300:  # 5 minutes
-                    logger.info(
-                        "Slot %s — Target time %s is >5 mins away (now %s). Skipping run.",
-                        slot_id,
-                        target_dt.strftime("%H:%M"),
-                        current_ist.strftime("%H:%M"),
+                    # Check if we're already past the target but within slot
+                    slot_end_h, slot_end_m = map(int, slot_info["end"].split(":"))
+                    slot_end_dt = current_ist.replace(
+                        hour=slot_end_h, minute=slot_end_m, second=0, microsecond=0
                     )
-                    return
+
+                    # If target passed but still within slot - upload immediately
+                    if target_dt <= current_ist and current_ist < slot_end_dt:
+                        logger.info(
+                            "Slot %s — Target time %s passed but within slot. Proceeding now.",
+                            slot_id,
+                            target_dt.strftime("%H:%M"),
+                        )
+                    else:
+                        logger.info(
+                            "Slot %s — Target time %s is >5 mins away (now %s). Skipping run.",
+                            slot_id,
+                            target_dt.strftime("%H:%M"),
+                            current_ist.strftime("%H:%M"),
+                        )
+                        return
                 else:
                     logger.info(
                         "Slot %s — Target time %s is close (in %.1f min). Waiting...",
