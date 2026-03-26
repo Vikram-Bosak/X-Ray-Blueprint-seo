@@ -18,11 +18,28 @@ import pytz
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import settings
-from src.drive_handler import get_oldest_video, download_video, delete_file, list_video_files
+from src.drive_handler import (
+    get_oldest_video,
+    download_video,
+    delete_file,
+    list_video_files,
+)
 from src.seo_generator import generate_seo_metadata
 from src.youtube_uploader import upload_video
 from src.telegram_notifier import send_success_notification, send_failure_notification
-from src.scheduler import load_state, save_state, get_active_slot, can_upload, mark_uploaded, now_ist, commit_state_to_github, compute_upload_time, ist_to_et, get_next_slot_info
+from src.scheduler import (
+    load_state,
+    save_state,
+    get_active_slot,
+    can_upload,
+    mark_uploaded,
+    now_ist,
+    commit_state_to_github,
+    compute_upload_time,
+    ist_to_et,
+    get_next_slot_info,
+)
+
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 def setup_logging():
@@ -46,22 +63,26 @@ logger = logging.getLogger("main")
 # ── Main Agent Logic ──────────────────────────────────────────────────────────
 def run_agent():
     setup_logging()
-    
+
     # ── LOCK MECHANISM ─────────────────────────────────────────────────────────
     # Prevent parallel runs (important for local execution)
-    lock_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent.lock")
+    lock_file = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent.lock"
+    )
     if os.path.exists(lock_file):
         # Check if the lock is stale (older than 30 minutes)
         lock_age = time.time() - os.path.getmtime(lock_file)
         if lock_age < 1800:
-            logger.warning("Another instance of the agent is already running (lock file exists). Exiting.")
+            logger.warning(
+                "Another instance of the agent is already running (lock file exists). Exiting."
+            )
             return
         else:
             logger.warning("Stale lock file found (>30 min). Overriding.")
-    
+
     with open(lock_file, "w") as f:
         f.write(str(os.getpid()))
-    
+
     file_info = None
     local_path = None
     upload_succeeded = False
@@ -72,16 +93,28 @@ def run_agent():
         logger.info("=" * 60)
 
         current_ist = now_ist()
-        state_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "state", "upload_state.json")
-        
+        state_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "state",
+            "upload_state.json",
+        )
+
         # ── STEP 0: Check Scheduler (Skip if BYPASS_SCHEDULER is True) ──────────
         if os.environ.get("BYPASS_SCHEDULER", "").lower() == "true":
-            logger.info("[STEP 0] ! BYPASS_SCHEDULER is active. Overriding IST slots for testing.")
-            slot_id, slot_info = "TEST", {"label": "Manual Test", "start": "00:00", "end": "23:59"}
+            logger.info(
+                "[STEP 0] ! BYPASS_SCHEDULER is active. Overriding IST slots for testing."
+            )
+            slot_id, slot_info = (
+                "TEST",
+                {"label": "Manual Test", "start": "00:00", "end": "23:59"},
+            )
         else:
-            logger.info("[STEP 0] Checking scheduler status (IST: %s)...", current_ist.strftime("%H:%M"))
+            logger.info(
+                "[STEP 0] Checking scheduler status (IST: %s)...",
+                current_ist.strftime("%H:%M"),
+            )
             state = load_state(state_path)
-            
+
             slot_id, slot_info = get_active_slot(current_ist)
             if not slot_id:
                 logger.info("Not currently in an upload slot window. Sleeping.")
@@ -94,23 +127,40 @@ def run_agent():
 
             # ── Within-Slot Randomization ─────────────────────────────────────
             target_dt = compute_upload_time(slot_info, current_ist)
-            
+
             if current_ist < target_dt:
                 diff_seconds = (target_dt - current_ist).total_seconds()
-                if diff_seconds > 900: # 15 minutes
-                    logger.info("Slot %s — Target time %s is >15 mins away (now %s). Skipping run.", slot_id, target_dt.strftime("%H:%M"), current_ist.strftime("%H:%M"))
+                if diff_seconds > 300:  # 5 minutes
+                    logger.info(
+                        "Slot %s — Target time %s is >5 mins away (now %s). Skipping run.",
+                        slot_id,
+                        target_dt.strftime("%H:%M"),
+                        current_ist.strftime("%H:%M"),
+                    )
                     return
                 else:
-                    logger.info("Slot %s — Target time %s is close (in %.1f min). Waiting...", slot_id, target_dt.strftime("%H:%M"), diff_seconds / 60)
+                    logger.info(
+                        "Slot %s — Target time %s is close (in %.1f min). Waiting...",
+                        slot_id,
+                        target_dt.strftime("%H:%M"),
+                        diff_seconds / 60,
+                    )
                     time.sleep(diff_seconds)
-                    current_ist = now_ist() # Update current time after sleep
+                    current_ist = now_ist()  # Update current time after sleep
             else:
-                logger.info("Slot %s — Target time %s already passed (now %s). Proceeding.", slot_id, target_dt.strftime("%H:%M"), current_ist.strftime("%H:%M"))
+                logger.info(
+                    "Slot %s — Target time %s already passed (now %s). Proceeding.",
+                    slot_id,
+                    target_dt.strftime("%H:%M"),
+                    current_ist.strftime("%H:%M"),
+                )
 
         logger.info("Active Slot: %s (%s)", slot_id, slot_info["label"])
 
         # ── STEP 1: Scan Google Drive ─────────────────────────────────────────
-        logger.info("[STEP 1] Scanning Google Drive folder: %s", settings.DRIVE_FOLDER_ID)
+        logger.info(
+            "[STEP 1] Scanning Google Drive folder: %s", settings.DRIVE_FOLDER_ID
+        )
         file_info = get_oldest_video(settings.DRIVE_FOLDER_ID)
 
         if file_info is None:
@@ -122,7 +172,9 @@ def run_agent():
         file_size = int(file_info.get("size", 0))
         logger.info(
             "Selected file: '%s' | ID: %s | Size: %.2f MB",
-            file_name, file_id, file_size / (1024 * 1024)
+            file_name,
+            file_id,
+            file_size / (1024 * 1024),
         )
 
         # ── STEP 2: Download Video ────────────────────────────────────────────
@@ -134,7 +186,11 @@ def run_agent():
         logger.info("[STEP 3] Generating SEO metadata via AI...")
         metadata = generate_seo_metadata(file_name)
         logger.info("Title: %s", metadata["title"])
-        logger.info("Tags (%d): %s", len(metadata["tags"]), ", ".join(metadata["tags"][:5]) + "...")
+        logger.info(
+            "Tags (%d): %s",
+            len(metadata["tags"]),
+            ", ".join(metadata["tags"][:5]) + "...",
+        )
 
         # ── STEP 4: Upload to YouTube ─────────────────────────────────────────
         logger.info("[STEP 4] Uploading to YouTube...")
@@ -150,7 +206,9 @@ def run_agent():
         if deleted:
             logger.info("Drive file deleted successfully.")
         else:
-            logger.warning("Drive file deletion failed (non-critical). Will retry next run.")
+            logger.warning(
+                "Drive file deletion failed (non-critical). Will retry next run."
+            )
 
         # ── STEP 5.5: Update Scheduler State ────────────────────────────────
         if os.environ.get("BYPASS_SCHEDULER", "").lower() != "true":
@@ -160,32 +218,41 @@ def run_agent():
 
         # ── STEP 6: Send Telegram Notification ───────────────────────────────
         logger.info("[STEP 6] Sending Telegram notification...")
-        
+
         # Get next slot info
-        next_slot = get_next_slot_info(state, current_ist) if 'state' in locals() else None
-        
+        next_slot = (
+            get_next_slot_info(state, current_ist) if "state" in locals() else None
+        )
+
         # Get next video name
         next_file = get_oldest_video(settings.DRIVE_FOLDER_ID)
         next_video_name = next_file["name"] if next_file else None
-        
+
         # Get video counts
         all_drive_files = list_video_files(settings.DRIVE_FOLDER_ID)
-        pending_videos = len([f for f in all_drive_files if not f["name"].startswith("✅ DONE")])
-        
+        pending_videos = len(
+            [f for f in all_drive_files if not f["name"].startswith("✅ DONE")]
+        )
+
         # Get processed count from PROCESSED folder
         processed_videos = 0
         try:
             from src.drive_handler import _get_drive_service
+
             service = _get_drive_service()
             processed_folder_id = "1ONZ8c2QMFOWiYtnwdOg4Oko7sEcVyl-X"
-            processed = service.files().list(
-                q=f'"{processed_folder_id}" in parents and trashed=false',
-                fields='files(id)'
-            ).execute()
-            processed_videos = len(processed.get('files', []))
+            processed = (
+                service.files()
+                .list(
+                    q=f'"{processed_folder_id}" in parents and trashed=false',
+                    fields="files(id)",
+                )
+                .execute()
+            )
+            processed_videos = len(processed.get("files", []))
         except:
             processed_videos = 0
-        
+
         send_success_notification(
             title=metadata["title"],
             video_url=video_url,
@@ -196,12 +263,12 @@ def run_agent():
                 "label": slot_info["label"],
                 "ist_time": current_ist.strftime("%d %b %Y, %I:%M %p IST"),
                 "us_time": ist_to_et(current_ist),
-                "uploads_today": state["uploads_today"] if 'state' in locals() else 0
+                "uploads_today": state["uploads_today"] if "state" in locals() else 0,
             },
             next_video=next_video_name,
             next_slot_info=next_slot,
             pending_videos=pending_videos,
-            processed_videos=processed_videos
+            processed_videos=processed_videos,
         )
 
         logger.info("=" * 60)
