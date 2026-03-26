@@ -1,13 +1,10 @@
 {
-  "date_ist": "2026-03-26",
-  "uploads_today": 4,
+  "date_ist": "2026-03-27",
+  "uploads_today": 1,
   "slots_used": [
-    "4",
-    "5",
-    "2",
-    "3"
+    "4"
   ],
-  "last_upload_ist": "23:39",
+  "last_upload_ist": "01:02",
   "slot_windows": {
     "1": {
       "start": "18:00",
