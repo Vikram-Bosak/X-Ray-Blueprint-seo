@@ -2,7 +2,8 @@
 src/main.py
 ────────────
 Entry point for the YouTube Shorts SEO Agent.
-Orchestrates all steps: Drive scan → Download → SEO → YouTube upload → Drive delete → Email.
+Powered by GitHub Actions + Cron-job.org = Most Reliable Free 24/7 System
+Orchestrates all steps: Drive scan → Download → SEO → YouTube upload → Drive delete → Telegram notification.
 """
 
 import logging

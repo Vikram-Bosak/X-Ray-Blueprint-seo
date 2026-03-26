@@ -1,8 +1,9 @@
 # 🎬 YouTube Shorts SEO Agent
 
 > Fully automated pipeline: **Google Drive → AI SEO → YouTube Upload → Email Notification**
+> Powered by **GitHub Actions + Cron-job.org** — Most Reliable Free 24/7 System
 
-Runs every 30 minutes via GitHub Actions. Zero manual steps after the one-time setup.
+Runs every 5 minutes via GitHub Actions. Zero manual steps after the one-time setup.
 
 ---
 
@@ -21,13 +22,14 @@ Runs every 30 minutes via GitHub Actions. Zero manual steps after the one-time s
 
 ```
 youtube-seo-agent/
-├── .github/workflows/agent.yml   ← Auto-runs every 30 minutes
+├── .github/workflows/agent.yml   ← Auto-runs every 5 minutes + external trigger support
 ├── src/
 │   ├── main.py                   ← Orchestrator
 │   ├── drive_handler.py          ← Google Drive operations
 │   ├── seo_generator.py          ← AI metadata generation
 │   ├── youtube_uploader.py       ← YouTube Data API
-│   └── email_notifier.py         ← Email via Gmail SMTP
+│   ├── scheduler.py              ← Upload scheduling (US peak hours)
+│   └── telegram_notifier.py      ← Telegram notifications
 ├── config/settings.py            ← Environment variable loader
 ├── get_youtube_token.py          ← One-time token generator (run locally)
 ├── requirements.txt
@@ -40,7 +42,7 @@ youtube-seo-agent/
 
 ### Prerequisites
 - A Google account (for Drive + YouTube)
-- A GitHub account (free tier is fine)
+- A GitHub account (free tier is fine — **unlimited minutes for public repos**)
 - An Anthropic API key (Claude) — get one at [console.anthropic.com](https://console.anthropic.com)
 - Python 3.11+ installed locally (only needed for Step 3)
 
@@ -156,11 +158,49 @@ The agent will now run automatically every 30 minutes. You can also trigger it m
 
 | Setting | Default | How to Change |
 |---|---|---|
-| Run frequency | Every 30 min | Edit `cron` in `.github/workflows/agent.yml` |
+| Run frequency | Every 5 min | Edit `cron` in `.github/workflows/agent.yml` |
+| External trigger | Cron-job.org | Use `workflow_dispatch` or `repository_dispatch` |
 | Privacy | `public` | Change `privacyStatus` in `youtube_uploader.py` |
 | AI provider | Anthropic Claude | Set `OPENAI_API_KEY` instead of `ANTHROPIC_API_KEY` |
 | Video category | `22` (People & Blogs) | AI adjusts based on filename |
 | Default language | `hi` (Hindi) | AI adjusts based on filename |
+
+---
+
+## ⚡ GitHub Actions + Cron-job.org — Most Reliable Free 24/7 System
+
+This project uses **GitHub Actions** for scheduling and **Cron-job.org** for external triggers.
+
+### Option 1: GitHub Actions Only (Default)
+- Runs every 5 minutes automatically
+- No additional setup needed
+- Free for public repos: **Unlimited minutes**
+
+### Option 2: GitHub Actions + Cron-job.org (Recommended for reliability)
+For minute-level precision, use Cron-job.org to trigger the workflow:
+
+1. **Enable `workflow_dispatch`** — Already enabled in this repo ✅
+2. **Create Cron-job.org job:**
+   - **URL:** `https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/dispatches`
+   - **Method:** POST
+   - **Headers:**
+     ```
+     Authorization: token YOUR_GITHUB_TOKEN
+     Accept: application/vnd.github+json
+     ```
+   - **Body:** `{"event_type": "cron-trigger"}`
+   - **Schedule:** Up to 60x/hour (once per minute)
+
+### Why This Combo?
+
+| Feature | GitHub Actions | Cron-job.org |
+|---------|---------------|--------------|
+| Schedule | Every 5 min (free) | Every 1 min (free) |
+| External API call | ❌ | ✅ |
+| Cost | FREE | FREE |
+| Public repo minutes | Unlimited | N/A |
+
+**Best of both worlds:** Use GitHub Actions schedule as backup, Cron-job.org for precise triggering! |
 
 ---
 
@@ -191,8 +231,8 @@ YouTube's Data API allows **10,000 units/day** (free).
 Each video upload costs **1,600 units**.
 This means you can upload up to **6 videos per day** within the free quota.
 
-The agent runs every 30 minutes but processes **one video per run**, so:
-- 30-min interval = up to 48 runs/day → limited to 6 actual uploads by quota
+The agent runs every 5 minutes but processes **one video per run**, so:
+- 5-min interval = up to 288 runs/day → limited to 6 actual uploads by quota
 
 ---
 
