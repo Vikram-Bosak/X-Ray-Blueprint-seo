@@ -50,7 +50,9 @@ YOUTUBE_REFRESH_TOKEN: str = _require("YOUTUBE_REFRESH_TOKEN")
 ANTHROPIC_API_KEY: str = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "").strip()
 NVIDIA_API_KEY: str = os.environ.get("NVIDIA_API_KEY", "").strip()
-NVIDIA_BASE_URL: str = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+NVIDIA_BASE_URL: str = os.environ.get(
+    "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
+)
 NVIDIA_MODEL: str = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
 
 if not any([ANTHROPIC_API_KEY, OPENAI_API_KEY, NVIDIA_API_KEY]):
@@ -69,6 +71,9 @@ else:
 # ── Telegram ─────────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN: str = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID: str = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+TELEGRAM_GROUP_CHAT_ID: str = os.environ.get(
+    "TELEGRAM_GROUP_CHAT_ID", "-1003769042674"
+).strip()
 
 TELEGRAM_ENABLED: bool = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 if not TELEGRAM_ENABLED:

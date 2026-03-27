@@ -27,9 +27,16 @@ def _get_ist_time() -> str:
     return now_ist.strftime("%d %b %Y, %I:%M:%S %p IST")
 
 
-def _send_telegram_message(text: str, parse_mode: str = "HTML") -> bool:
+def _send_telegram_message(
+    text: str, parse_mode: str = "HTML", chat_id: str = None
+) -> bool:
     """
     Send a message via Telegram Bot API.
+
+    Args:
+        text: Message text to send
+        parse_mode: HTML or Markdown
+        chat_id: Specific chat ID (optional, uses default if not provided)
 
     Returns True on success, False on failure.
     """
@@ -37,9 +44,10 @@ def _send_telegram_message(text: str, parse_mode: str = "HTML") -> bool:
         logger.info("Telegram notifications disabled — skipping message")
         return True
 
+    target_chat_id = chat_id if chat_id else settings.TELEGRAM_CHAT_ID
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": settings.TELEGRAM_CHAT_ID,
+        "chat_id": target_chat_id,
         "text": text,
         "parse_mode": parse_mode,
     }
@@ -47,11 +55,35 @@ def _send_telegram_message(text: str, parse_mode: str = "HTML") -> bool:
     try:
         response = requests.post(url, json=payload, timeout=30)
         response.raise_for_status()
-        logger.info("Telegram message sent to chat %s", settings.TELEGRAM_CHAT_ID)
+        logger.info("Telegram message sent to chat %s", target_chat_id)
         return True
     except requests.exceptions.RequestException as exc:
         logger.error("Failed to send Telegram message: %s", exc)
         return False
+
+
+def _send_to_all_chats(text: str, parse_mode: str = "HTML") -> bool:
+    """
+    Send message to both personal chat and group chat.
+    Returns True if at least one message succeeds.
+    """
+    sent_to_personal = _send_telegram_message(
+        text, parse_mode, settings.TELEGRAM_CHAT_ID
+    )
+    sent_to_group = _send_telegram_message(
+        text, parse_mode, settings.TELEGRAM_GROUP_CHAT_ID
+    )
+
+    if sent_to_personal and sent_to_group:
+        logger.info("Message sent to both personal chat and group")
+    elif sent_to_group:
+        logger.info("Message sent to group only (personal failed)")
+    elif sent_to_personal:
+        logger.info("Message sent to personal only (group failed)")
+    else:
+        logger.error("Failed to send message to both chats")
+
+    return sent_to_personal or sent_to_group
 
 
 def send_success_notification(
@@ -75,7 +107,7 @@ def send_success_notification(
             "label": "Unknown",
             "ist_time": _get_ist_time(),
             "us_time": "Unknown",
-            "uploads_today": 0
+            "uploads_today": 0,
         }
 
     slot_id = slot_info.get("id", "?")
@@ -115,11 +147,11 @@ def send_success_notification(
 {video_counts}
 📁 <b>Drive File:</b> Moved to PROCESSED ✅{next_info}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎬 The 3D Breakdown Bot
-"""
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 🎬 The 3D Breakdown Bot
+ """
 
-    return _send_telegram_message(message)
+    return _send_to_all_chats(message)
 
 
 def send_failure_notification(
@@ -148,8 +180,8 @@ def send_failure_notification(
 
 ⚠️ <b>Drive file NOT deleted</b> — will retry next run
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎬 The 3D Breakdown Bot
-"""
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 🎬 The 3D Breakdown Bot
+ """
 
-    return _send_telegram_message(message)
+    return _send_to_all_chats(message)
